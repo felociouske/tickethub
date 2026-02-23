@@ -41,9 +41,9 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Hero Section with Background Image */}
       <section 
-        className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white py-20 bg-cover bg-center"
+        className="relative min-h-screen w-full bg-cover bg-center text-white flex items-center"
         style={{
-          backgroundImage: `linear-gradient(rgba(225, 29, 72, 0.85), rgba(190, 18, 60, 0.85)), url('/src/assets/images/image1.jpg')`,
+          backgroundImage: `linear-gradient(rgba(225, 29, 72, 0.85), rgba(190, 18, 60, 0.85)), url('/images/image1.jpg')`,
           backgroundBlendMode: 'multiply'
         }}
       >
@@ -58,11 +58,11 @@ export default function Home() {
             
             <div className="max-w-2xl mx-auto mt-8">
               <Link to="/events" className="block">
-                <div className="bg-white rounded-full p-2 flex items-center shadow-xl hover:shadow-2xl transition-shadow">
+                <div className="bg-white rounded-2xl md:rounded-full p-2 flex flex-col md:flex-row items-stretch md:items-center shadow-xl gap-2">
                   <input
                     type="text"
                     placeholder="Search for events, artists, or venues..."
-                    className="flex-1 px-4 py-2 text-gray-900 bg-transparent outline-none"
+                    className="w-full md:flex-1 px-4 py-3 text-gray-900 bg-transparent outline-none"
                     onClick={(e) => e.preventDefault()}
                   />
                   <button className="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-full font-semibold flex items-center space-x-2 transition-colors">
