@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { downloadReceipt } from '../utils/receiptDownload';
 import { ordersAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -323,7 +324,10 @@ export default function OrderDetail() {
                     <Link to="/my-tickets" className="w-full btn-primary block text-center">
                       View My Tickets
                     </Link>
-                    <button className="w-full btn-outline flex items-center justify-center space-x-2">
+                    <button 
+                      onClick={() => downloadReceipt(order)}
+                      className="w-full btn-outline flex items-center justify-center space-x-2"
+                    >
                       <Download className="h-4 w-4" />
                       <span>Download Receipt</span>
                     </button>

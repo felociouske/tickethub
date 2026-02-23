@@ -24,9 +24,21 @@ export default function Checkout() {
     }
   }, [items, navigate]);
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        email: user.email || '',
+        phone_number: user.phone_number || '',
+        payment_method: 'mpesa',
+      });
+    }
+  }, [user]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    console.log('Starting order creation...');
 
     try {
       const orderData = {
@@ -40,36 +52,43 @@ export default function Checkout() {
         })),
       };
 
+      console.log('📦 Order data:', orderData);
+
       const response = await ordersAPI.createOrder(orderData);
       
-      // Don't show toast here - it causes issues
-      // toast.success('Order created successfully!');
-      
-      // Clear cart first
-      clearCart();
-      
-      // Navigate immediately to payment process
+      console.log('✅ Full response:', response.data);
+
+      // Check if we got valid data
+      if (!response.data || !response.data.order_number) {
+        console.error('❌ Invalid response - missing order_number:', response.data);
+        toast.error('Order created but missing details. Please check My Orders.');
+        navigate('/orders');
+        return;
+      }
+      console.log('🔄 Navigating to payment with:', {
+        orderNumber: response.data.order_number,
+        amount: response.data.total_amount,
+        phoneNumber: formData.phone_number,
+      });
+
       navigate('/payment-process', {
         state: {
           orderNumber: response.data.order_number,
           amount: response.data.total_amount,
           phoneNumber: formData.phone_number,
         },
-        replace: true  // Add this to replace current history entry
+        replace: true
       });
+      setTimeout(() => clearCart(), 100);
 
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Failed to create order';
+      console.error('❌ Order creation failed:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || 'Failed to create order';
       toast.error(errorMessage);
-      console.error(error);
-      setLoading(false);  // Only set loading to false on error
+      setLoading(false);
     }
-    // Don't set loading to false on success - let the navigation happen
   };
-
-  if (items.length === 0) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -77,7 +96,6 @@ export default function Checkout() {
         <h1 className="text-3xl font-bold text-dark-900 mb-8">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Checkout Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 space-y-6">
               <div>
@@ -97,6 +115,11 @@ export default function Checkout() {
                       className="input-field"
                       placeholder="your@email.com"
                     />
+                    {user?.email && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Using your account email. You can change it if needed.
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -112,6 +135,11 @@ export default function Checkout() {
                       className="input-field"
                       placeholder="+254712345678"
                     />
+                    {user?.phone_number && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Using your account phone number. You can change it if needed.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -167,7 +195,6 @@ export default function Checkout() {
             </form>
           </div>
 
-          {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-md p-6 sticky top-20">
               <h3 className="text-xl font-bold text-dark-900 mb-4">Order Summary</h3>

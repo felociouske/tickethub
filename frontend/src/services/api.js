@@ -83,4 +83,6 @@ export const ordersAPI = {
   getMyTickets: () => api.get('/orders/tickets/'),
   getTicket: (ticketNumber) => api.get(`/orders/tickets/${ticketNumber}/`),
   initiatePayment: (orderNumber, data) => api.post(`/orders/${orderNumber}/pay/`, data),
+  submitPaymentProof: (orderNumber, data) => api.post(`/orders/${orderNumber}/submit-payment/`, data),
+  checkPaymentStatus: (orderNumber) => api.get(`/orders/${orderNumber}/payment-status/`),
 };

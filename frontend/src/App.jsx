@@ -15,10 +15,15 @@ import OrderDetail from './pages/Orderdetail';
 import ManualPayment from './pages/ManualPayment';
 import Profile from './pages/Profile';
 import PaymentProcess from './pages/PaymentProcess';
+import ScrollToTop from './components/ScrollToTop';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import HelpCenter from './pages/HelpCenter';
 
 function App() {
   return (
     <BrowserRouter>
+    <ScrollToTop />
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow">
@@ -36,6 +41,9 @@ function App() {
             <Route path="/orders/:orderNumber/manual-payment" element={<ManualPayment />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/payment-process" element={<PaymentProcess />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/help" element={<HelpCenter />} />
           </Routes>
         </main>
         <Footer />

@@ -4,11 +4,13 @@ import { authAPI } from '../services/api';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function Profile() {
   const { user, updateUser } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -41,8 +43,9 @@ export default function Profile() {
       toast.success('Profile updated successfully!');
       setEditing(false);
     } catch (error) {
-      toast.error('Failed to update profile');
-      console.error(error);
+      const errorMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to update profile';
+      toast.error(errorMsg);
+      console.error('Profile update error:', error.response?.data);
     } finally {
       setLoading(false);
     }
@@ -268,7 +271,10 @@ export default function Profile() {
                 <h4 className="font-semibold text-dark-900">Change Password</h4>
                 <p className="text-sm text-gray-600">Update your password to keep your account secure</p>
               </div>
-              <button className="btn-outline">
+              <button 
+                onClick={() => setShowPasswordModal(true)}
+                className="btn-outline"
+              >
                 Change Password
               </button>
             </div>
@@ -285,6 +291,12 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal 
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 }

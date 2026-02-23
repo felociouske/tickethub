@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Ticket, Calendar, MapPin, Download, QrCode } from 'lucide-react';
+import { downloadTicket } from '../utils/ticketDownload';
 import { format } from 'date-fns';
 import { ordersAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -7,7 +8,7 @@ import toast from 'react-hot-toast';
 export default function MyTickets() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, upcoming, past
+  const [filter, setFilter] = useState('all'); 
 
   useEffect(() => {
     fetchTickets();
@@ -16,10 +17,12 @@ export default function MyTickets() {
   const fetchTickets = async () => {
     try {
       const response = await ordersAPI.getMyTickets();
-      setTickets(response.data);
+      const ticketsData = response.data.results || [];  
+      setTickets(ticketsData);
     } catch (error) {
       toast.error('Failed to load tickets');
       console.error(error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -181,7 +184,10 @@ function TicketCard({ ticket }) {
           )}
         </div>
 
-        <button className="w-full btn-outline text-sm py-2 flex items-center justify-center space-x-2">
+        <button 
+          onClick={() => downloadTicket(ticket)}
+          className="w-full btn-outline text-sm py-2 flex items-center justify-center space-x-2"
+        >
           <Download className="h-4 w-4" />
           <span>Download Ticket</span>
         </button>

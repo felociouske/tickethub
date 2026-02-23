@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Phone, Copy, CheckCircle, Clock, AlertCircle, ArrowRight } from 'lucide-react';
+import { ordersAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function PaymentProcess() {
@@ -8,17 +9,16 @@ export default function PaymentProcess() {
   const location = useLocation();
   const { orderNumber, amount, phoneNumber } = location.state || {};
   
-  const [step, setStep] = useState(1); // 1: Instructions, 2: Submit Code, 3: Verification
+  const [step, setStep] = useState(1);
   const [transactionCode, setTransactionCode] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, verifying, approved, rejected
+  const [paymentStatus, setPaymentStatus] = useState('pending');
   const [loading, setLoading] = useState(false);
 
-  const paybillNumber = '123456'; // Your paybill number
-  const accountNumber = orderNumber || 'TH000000';
+  const tillNumber = '9876543'; 
 
   useEffect(() => {
     if (!orderNumber || !amount) {
-      navigate('/orders');
+      console.log('No order data');
     }
   }, [orderNumber, amount, navigate]);
 
@@ -36,38 +36,42 @@ export default function PaymentProcess() {
     }
 
     setLoading(true);
-    setPaymentStatus('verifying');
 
     try {
-      // TODO: Call API to submit transaction code
-      // const response = await ordersAPI.submitPaymentProof(orderNumber, {
-      //   transaction_code: transactionCode,
-      //   phone_number: phoneNumber,
-      // });
+      // Call the API to submit payment proof
+      await ordersAPI.submitPaymentProof(orderNumber, {
+        transaction_code: transactionCode,
+        phone_number: phoneNumber,
+      });
 
-      // Simulate API call
-      setTimeout(() => {
-        setPaymentStatus('pending');
-        setStep(3);
-        toast.success('Payment code submitted! Waiting for verification...');
-        setLoading(false);
-      }, 1500);
+      setStep(3);
+      toast.success('Payment code submitted! Waiting for verification...');
+      
+      // Start polling for status
+      checkPaymentStatus();
     } catch (error) {
-      toast.error('Failed to submit payment code');
-      setPaymentStatus('pending');
+      console.error('Submit error:', error);
+      toast.error(error.response?.data?.error || 'Failed to submit payment code');
+    } finally {
       setLoading(false);
     }
   };
 
   const checkPaymentStatus = async () => {
-    // TODO: Poll for payment status
-    // const response = await ordersAPI.checkPaymentStatus(orderNumber);
-    // setPaymentStatus(response.data.status);
+    try {
+      const response = await ordersAPI.checkPaymentStatus(orderNumber);
+      setPaymentStatus(response.data.status);
+      
+      if (response.data.status === 'approved') {
+        toast.success('Payment approved! 🎉');
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+    }
   };
 
   useEffect(() => {
     if (step === 3 && paymentStatus === 'pending') {
-      // Poll for payment status every 5 seconds
       const interval = setInterval(checkPaymentStatus, 5000);
       return () => clearInterval(interval);
     }
@@ -80,79 +84,56 @@ export default function PaymentProcess() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className={`flex items-center ${step >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
-                1
-              </div>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>1</div>
               <span className="ml-2 font-medium hidden sm:inline">Instructions</span>
             </div>
             <div className={`flex-1 h-1 mx-4 ${step >= 2 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
             <div className={`flex items-center ${step >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
-                2
-              </div>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>2</div>
               <span className="ml-2 font-medium hidden sm:inline">Submit Code</span>
             </div>
             <div className={`flex-1 h-1 mx-4 ${step >= 3 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
             <div className={`flex items-center ${step >= 3 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>
-                3
-              </div>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary-600 text-white' : 'bg-gray-300'}`}>3</div>
               <span className="ml-2 font-medium hidden sm:inline">Verification</span>
             </div>
           </div>
         </div>
 
-        {/* Step 1: Payment Instructions */}
+        {/* Step 1: Payment Instructions - TILL NUMBER */}
         {step === 1 && (
           <div className="bg-white rounded-xl shadow-md p-8 space-y-6">
             <div className="text-center">
               <Phone className="h-16 w-16 text-green-600 mx-auto mb-4" />
               <h1 className="text-3xl font-bold text-dark-900 mb-2">M-Pesa Payment</h1>
-              <p className="text-gray-600">Follow these steps to complete your payment</p>
+              <p className="text-gray-600">Pay using Buy Goods and Services</p>
             </div>
 
             <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
               <h3 className="font-bold text-green-900 mb-4 text-lg">Payment Instructions</h3>
               <ol className="space-y-4">
                 <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                  <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
                   <div className="flex-1">
-                    <p className="text-green-900 font-medium">Go to M-Pesa menu on your phone</p>
-                    <p className="text-green-700 text-sm">SIM Toolkit → M-Pesa → Lipa na M-Pesa → Paybill</p>
+                    <p className="text-green-900 font-medium">Go to M-Pesa on your phone</p>
+                    <p className="text-green-700 text-sm">SIM Toolkit → M-Pesa → Lipa na M-Pesa → Buy Goods and Services</p>
                   </div>
                 </li>
                 <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                  <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
                   <div className="flex-1">
-                    <p className="text-green-900 font-medium">Enter Business Number (Paybill)</p>
+                    <p className="text-green-900 font-medium">Enter Till Number</p>
                     <div className="flex items-center space-x-2 mt-2 bg-white p-3 rounded-lg border border-green-300">
-                      <code className="text-2xl font-bold text-green-900">{paybillNumber}</code>
-                      <button
-                        onClick={() => copyToClipboard(paybillNumber)}
-                        className="ml-auto text-green-600 hover:text-green-700"
-                      >
+                      <code className="text-3xl font-bold text-green-900">{tillNumber}</code>
+                      <button onClick={() => copyToClipboard(tillNumber)} className="ml-auto text-green-600 hover:text-green-700">
                         <Copy className="h-5 w-5" />
                       </button>
                     </div>
+                    <p className="text-xs text-green-700 mt-1">Store Name: TicketHub Kenya</p>
                   </div>
                 </li>
                 <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                  <div className="flex-1">
-                    <p className="text-green-900 font-medium">Enter Account Number</p>
-                    <div className="flex items-center space-x-2 mt-2 bg-white p-3 rounded-lg border border-green-300">
-                      <code className="text-xl font-bold text-green-900">{accountNumber}</code>
-                      <button
-                        onClick={() => copyToClipboard(accountNumber)}
-                        className="ml-auto text-green-600 hover:text-green-700"
-                      >
-                        <Copy className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                  <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
                   <div className="flex-1">
                     <p className="text-green-900 font-medium">Enter Amount</p>
                     <div className="mt-2 bg-white p-3 rounded-lg border border-green-300">
@@ -161,32 +142,29 @@ export default function PaymentProcess() {
                   </div>
                 </li>
                 <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">5</span>
-                  <div className="flex-1">
-                    <p className="text-green-900 font-medium">Enter your M-Pesa PIN and confirm</p>
-                  </div>
+                  <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                  <p className="text-green-900 font-medium">Enter your M-Pesa PIN and confirm</p>
                 </li>
                 <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">6</span>
-                  <div className="flex-1">
-                    <p className="text-green-900 font-medium">You will receive an M-Pesa confirmation SMS</p>
-                    <p className="text-green-700 text-sm mt-1">Save the transaction code from the SMS</p>
+                  <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                  <div>
+                    <p className="text-green-900 font-medium">Save the M-Pesa confirmation code</p>
+                    <p className="text-green-700 text-sm mt-1">You'll receive an SMS with a code like "QAB1CD2EFG"</p>
                   </div>
                 </li>
               </ol>
+
+              <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800 font-medium">
+                  📝 Reference: Order #{orderNumber}
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={() => setStep(2)}
-              className="w-full btn-primary flex items-center justify-center space-x-2"
-            >
+            <button onClick={() => setStep(2)} className="w-full btn-primary flex items-center justify-center space-x-2">
               <span>I've Made the Payment</span>
               <ArrowRight className="h-5 w-5" />
             </button>
-
-            <p className="text-center text-sm text-gray-600">
-              Having issues? <a href="/help" className="text-primary-600 hover:text-primary-700 font-medium">Contact Support</a>
-            </p>
           </div>
         )}
 
@@ -214,7 +192,7 @@ export default function PaymentProcess() {
                   required
                 />
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  Usually starts with letters like "QAB", "RCF", "QBM" followed by numbers
+                  Check your SMS from M-PESA. Code is usually 10 characters.
                 </p>
               </div>
 
@@ -223,24 +201,16 @@ export default function PaymentProcess() {
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <div className="text-sm text-yellow-800">
                     <p className="font-semibold mb-1">Can't find your code?</p>
-                    <p>Check your SMS inbox for a message from M-PESA. The code is usually 10 characters long.</p>
+                    <p>Look for a message from M-PESA saying "Confirmed. Ksh {amount?.toLocaleString()}..."</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="flex-1 btn-outline"
-                >
+                <button type="button" onClick={() => setStep(1)} className="flex-1 btn-outline">
                   Back
                 </button>
-                <button
-                  type="submit"
-                  disabled={loading || transactionCode.length < 8}
-                  className="flex-1 btn-primary disabled:opacity-50"
-                >
+                <button type="submit" disabled={loading || transactionCode.length < 8} className="flex-1 btn-primary disabled:opacity-50">
                   {loading ? 'Submitting...' : 'Submit Code'}
                 </button>
               </div>
@@ -269,38 +239,26 @@ function PaymentStatusDisplay({ status, transactionCode, orderNumber }) {
   const statusConfig = {
     pending: {
       icon: <Clock className="h-16 w-16 text-yellow-600" />,
-      color: 'yellow',
       title: 'Verifying Payment',
-      message: 'Your payment is being verified by our team. This usually takes a few minutes.',
-    },
-    verifying: {
-      icon: <Clock className="h-16 w-16 text-blue-600 animate-spin" />,
-      color: 'blue',
-      title: 'Processing...',
-      message: 'Please wait while we verify your transaction.',
+      message: 'Your payment is being verified. This usually takes 2-5 minutes.',
     },
     approved: {
       icon: <CheckCircle className="h-16 w-16 text-green-600" />,
-      color: 'green',
       title: 'Payment Approved!',
       message: 'Your payment has been verified. Your tickets are ready!',
     },
     rejected: {
       icon: <AlertCircle className="h-16 w-16 text-red-600" />,
-      color: 'red',
       title: 'Payment Not Found',
-      message: 'We could not verify your transaction. Please check the code or contact support.',
+      message: 'We could not verify your transaction. Please contact support.',
     },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || statusConfig.pending;
 
   return (
     <div className="text-center space-y-6">
-      <div className={`bg-${config.color}-50 rounded-full w-24 h-24 flex items-center justify-center mx-auto`}>
-        {config.icon}
-      </div>
-
+      <div className="mx-auto">{config.icon}</div>
       <div>
         <h1 className="text-3xl font-bold text-dark-900 mb-2">{config.title}</h1>
         <p className="text-gray-600">{config.message}</p>
@@ -320,41 +278,18 @@ function PaymentStatusDisplay({ status, transactionCode, orderNumber }) {
       {status === 'pending' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-800">
-            ⏱️ Verification usually takes 2-5 minutes. You'll receive an email once approved.
+            ⏱️ We're verifying your payment. You'll be notified once approved.
           </p>
         </div>
       )}
 
       {status === 'approved' && (
-        <button
-          onClick={() => navigate(`/orders/${orderNumber}`)}
-          className="btn-primary"
-        >
+        <button onClick={() => navigate(`/orders/${orderNumber}`)} className="btn-primary">
           View My Tickets
         </button>
       )}
 
-      {status === 'rejected' && (
-        <div className="flex space-x-4">
-          <button
-            onClick={() => window.location.reload()}
-            className="flex-1 btn-outline"
-          >
-            Try Again
-          </button>
-          <button
-            onClick={() => navigate('/help')}
-            className="flex-1 btn-primary"
-          >
-            Contact Support
-          </button>
-        </div>
-      )}
-
-      <button
-        onClick={() => navigate('/dashboard')}
-        className="text-primary-600 hover:text-primary-700 font-medium text-sm"
-      >
+      <button onClick={() => navigate('/dashboard')} className="text-primary-600 hover:text-primary-700 font-medium text-sm">
         Go to Dashboard
       </button>
     </div>

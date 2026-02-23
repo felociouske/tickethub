@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Ticket, Calendar, TrendingUp, Eye } from 'lucide-react';
+import { ShoppingBag, Ticket, Calendar, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { ordersAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -20,11 +20,18 @@ export default function Dashboard() {
         ordersAPI.getOrders(),
         ordersAPI.getMyTickets(),
       ]);
-      setOrders(ordersRes.data);
-      setTickets(ticketsRes.data);
+      
+      // Extract from pagination wrapper
+      const ordersData = ordersRes.data.results || [];
+      const ticketsData = ticketsRes.data.results || [];
+      
+      setOrders(ordersData);
+      setTickets(ticketsData);
     } catch (error) {
       toast.error('Failed to load dashboard data');
       console.error(error);
+      setOrders([]);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -34,7 +41,8 @@ export default function Dashboard() {
     totalOrders: orders.length,
     totalTickets: tickets.length,
     upcomingEvents: tickets.filter((t) => {
-      const eventDate = new Date(t.order_item?.order?.event?.start_date || new Date());
+      if (!t.created_at) return false;
+      const eventDate = new Date(t.created_at);
       return eventDate > new Date();
     }).length,
     totalSpent: orders.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0),
@@ -206,7 +214,7 @@ function TicketCard({ ticket }) {
             <p className="font-semibold text-dark-900 text-sm">
               {ticket.event_title || 'Event'}
             </p>
-            <p className="text-xs text-gray-600">{ticket.ticket_type_name}</p>
+            <p className="text-xs text-gray-600">{ticket.ticket_type_name || 'Ticket'}</p>
           </div>
         </div>
         <span
