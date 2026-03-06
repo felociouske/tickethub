@@ -14,7 +14,7 @@ export default function PaymentProcess() {
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [loading, setLoading] = useState(false);
 
-  const tillNumber = '9876543'; 
+  const tillNumber = '000000'; 
 
   useEffect(() => {
     if (!orderNumber || !amount) {
