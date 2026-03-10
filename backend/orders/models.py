@@ -232,3 +232,46 @@ class Payment(models.Model):
     
     def __str__(self):
         return f"Payment for {self.order.order_number} - {self.status}"
+
+
+class PaymentProof(models.Model):
+    """
+    Store manual payment proofs submitted by users
+    """
+    STATUS_CHOICES = (
+        ('pending', 'Pending Verification'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='payment_proofs'
+    )
+    transaction_code = models.CharField(max_length=20, unique=True)
+    phone_number = models.CharField(max_length=15)
+    payment_method = models.CharField(max_length=20, default='mpesa')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    notes = models.TextField(blank=True, null=True)
+    
+    # Admin verification
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='verified_payments'
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.transaction_code} - {self.order.order_number}"

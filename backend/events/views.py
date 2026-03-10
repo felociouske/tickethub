@@ -1,6 +1,7 @@
 from rest_framework import generics, filters, status
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny 
 from rest_framework.decorators import api_view, permission_classes
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
@@ -21,7 +22,7 @@ class CategoryListView(generics.ListAPIView):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
 
 
 class EventListView(generics.ListAPIView):
@@ -31,7 +32,7 @@ class EventListView(generics.ListAPIView):
     Supports search by title, description, venue.
     """
     serializer_class = EventListSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'city', 'is_featured']
     search_fields = ['title', 'description', 'venue_name']
@@ -138,11 +139,11 @@ class FeaturedEventsView(generics.ListAPIView):
     """
     queryset = Event.objects.filter(status='published', is_featured=True)[:6]
     serializer_class = EventListSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticatedOrReadOnly])
+@permission_classes([AllowAny])
 def event_stats(request):
     """
     API endpoint to get general event statistics.

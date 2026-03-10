@@ -44,7 +44,7 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for user profile display and updates.
     """
-    full_name = serializers.CharField(read_only=True)
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
     
     class Meta:
         model = User
@@ -54,7 +54,22 @@ class UserSerializer(serializers.ModelSerializer):
             'bio', 'date_of_birth', 'organization_name',
             'organization_verified', 'created_at'
         )
-        read_only_fields = ('email', 'user_type', 'organization_verified', 'created_at')
+        read_only_fields = ('id', 'email', 'username', 'user_type', 'organization_verified', 'created_at')
+    
+    def update(self, instance, validated_data):
+        # Only update fields that are provided and not read-only
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.bio = validated_data.get('bio', instance.bio)
+        instance.date_of_birth = validated_data.get('date_of_birth', instance.date_of_birth)
+        instance.organization_name = validated_data.get('organization_name', instance.organization_name)
+        
+        if 'profile_picture' in validated_data:
+            instance.profile_picture = validated_data.get('profile_picture')
+        
+        instance.save()
+        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):

@@ -11,7 +11,6 @@ from .serializers import (
     PaymentSerializer
 )
 
-
 class OrderCreateView(generics.CreateAPIView):
     """
     API endpoint to create a new order.
@@ -22,12 +21,25 @@ class OrderCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        return serializer.save(user=self.request.user)
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
+        # Create the order
         order = self.perform_create(serializer)
+        
+        # CRITICAL FIX: Refresh the order from database to get related data
+        order.refresh_from_db()
+        
+        # Use select_related and prefetch_related for efficient querying
+        order = Order.objects.select_related(
+            'event', 
+            'user'
+        ).prefetch_related(
+            'items__ticket_type'
+        ).get(id=order.id)
         
         # Return order details with order serializer
         response_serializer = OrderSerializer(order)
@@ -42,7 +54,9 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).select_related(
+            'event'
+        ).prefetch_related('items__ticket_type')
 
 
 class OrderDetailView(generics.RetrieveAPIView):
@@ -54,20 +68,28 @@ class OrderDetailView(generics.RetrieveAPIView):
     lookup_field = 'order_number'
     
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).select_related(
+            'event'
+        ).prefetch_related('items__ticket_type')
 
 
 class MyTicketsView(generics.ListAPIView):
     """
-    API endpoint to list all user's tickets.
+    API endpoint to list all user's tickets from PAID orders only
     """
     serializer_class = TicketSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         return Ticket.objects.filter(
-            order_item__order__user=self.request.user
-        ).select_related('order_item__order', 'order_item__ticket_type')
+            order_item__order__user=self.request.user,
+            order_item__order__status='paid'  
+        ).select_related(
+            'order_item__order__event',
+            'order_item__order__event__organizer',
+            'order_item__ticket_type',
+            'order_item__order'
+        ).order_by('-created_at')
 
 
 class TicketDetailView(generics.RetrieveAPIView):
@@ -92,9 +114,6 @@ class PaymentCallbackView(APIView):
     permission_classes = []
     
     def post(self, request):
-        # This is a simplified version - actual implementation depends on payment provider
-        
-        # Extract payment data from callback
         transaction_id = request.data.get('transaction_id')
         order_number = request.data.get('order_number')
         status_code = request.data.get('status')
@@ -102,7 +121,6 @@ class PaymentCallbackView(APIView):
         try:
             order = Order.objects.get(order_number=order_number)
             
-            # Update or create payment record
             payment, created = Payment.objects.get_or_create(
                 order=order,
                 defaults={
@@ -114,7 +132,6 @@ class PaymentCallbackView(APIView):
             payment.transaction_id = transaction_id
             payment.raw_response = request.data
             
-            # Update payment status based on callback
             if status_code == 'success':
                 payment.status = 'completed'
                 order.status = 'paid'
@@ -123,8 +140,6 @@ class PaymentCallbackView(APIView):
                 from django.utils import timezone
                 payment.completed_at = timezone.now()
                 order.paid_at = timezone.now()
-                
-                # TODO: Send confirmation email to user
             else:
                 payment.status = 'failed'
                 order.status = 'cancelled'
@@ -162,7 +177,6 @@ class InitiatePaymentView(APIView):
         
         payment_method = request.data.get('payment_method')
         
-        # Create payment record
         payment = Payment.objects.create(
             order=order,
             payment_method=payment_method,
@@ -170,15 +184,76 @@ class InitiatePaymentView(APIView):
             phone_number=request.data.get('phone_number', order.phone_number)
         )
         
-        # TODO: Integrate with actual payment gateway
-        # For M-Pesa: Call Daraja API STK Push
-        # For Stripe: Create payment intent
-        
-        # For now, return a mock response
         return Response({
             'message': 'Payment initiated',
             'payment_id': payment.id,
             'order_number': order.order_number,
             'amount': str(order.total_amount),
-            # In production, return payment URL or checkout session
         }, status=status.HTTP_200_OK)
+
+class SubmitPaymentProofView(APIView):
+    """Submit payment transaction code"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, order_number):
+        from .models import PaymentProof
+        
+        try:
+            order = Order.objects.get(order_number=order_number, user=request.user)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if order.status != 'pending':
+            return Response({'error': 'Order is not pending'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        transaction_code = request.data.get('transaction_code')
+        if not transaction_code:
+            return Response({'error': 'Transaction code required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if code already used
+        if PaymentProof.objects.filter(transaction_code=transaction_code.upper()).exists():
+            return Response({'error': 'Transaction code already submitted'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create payment proof
+        PaymentProof.objects.create(
+            order=order,
+            transaction_code=transaction_code.upper(),
+            phone_number=request.data.get('phone_number', order.phone_number),
+            payment_method=order.payment_method,
+            amount=order.total_amount,
+            status='pending'
+        )
+        
+        return Response({
+            'message': 'Payment proof submitted successfully',
+            'status': 'pending'
+        }, status=status.HTTP_201_CREATED)
+
+
+class CheckPaymentStatusView(APIView):
+    """Check payment verification status"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, order_number):
+        from .models import PaymentProof
+        
+        try:
+            order = Order.objects.get(order_number=order_number, user=request.user)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        payment_proof = order.payment_proofs.first()
+        
+        if not payment_proof:
+            return Response({'status': 'no_proof'})
+        
+        # If approved, also check if order status is updated
+        if payment_proof.status == 'approved':
+            order.refresh_from_db()
+        
+        return Response({
+            'status': payment_proof.status,
+            'transaction_code': payment_proof.transaction_code,
+            'submitted_at': payment_proof.created_at,
+            'order_status': order.status,
+        })

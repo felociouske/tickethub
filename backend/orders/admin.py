@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Order, OrderItem, Ticket, Payment
+from django.utils import timezone
+from .models import Order, OrderItem, Ticket, Payment, PaymentProof
 
 
 class OrderItemInline(admin.TabularInline):
@@ -110,3 +111,45 @@ class PaymentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(PaymentProof)
+class PaymentProofAdmin(admin.ModelAdmin):
+    list_display = ['transaction_code', 'order', 'amount', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['transaction_code', 'order__order_number', 'phone_number']
+    readonly_fields = ['created_at', 'updated_at']
+    actions = ['approve_payments', 'reject_payments']
+    
+    fieldsets = (
+        ('Payment Proof', {
+            'fields': ('order', 'transaction_code', 'phone_number', 'payment_method', 'amount', 'status')
+        }),
+        ('Verification', {
+            'fields': ('verified_by', 'verified_at', 'rejection_reason', 'notes')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def approve_payments(self, request, queryset):
+        for proof in queryset.filter(status='pending'):
+            proof.status = 'approved'
+            proof.verified_by = request.user
+            proof.verified_at = timezone.now()
+            proof.save()
+            
+            # Update order
+            proof.order.status = 'paid'
+            proof.order.transaction_id = proof.transaction_code
+            proof.order.paid_at = timezone.now()
+            proof.order.save()
+        
+        self.message_user(request, f"{queryset.count()} payments approved")
+    approve_payments.short_description = "✅ Approve selected payments"
+    
+    def reject_payments(self, request, queryset):
+        queryset.update(status='rejected', verified_by=request.user, verified_at=timezone.now())
+        self.message_user(request, f"{queryset.count()} payments rejected")
+    reject_payments.short_description = "❌ Reject selected payments"

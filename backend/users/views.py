@@ -1,4 +1,5 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, serializers
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -6,7 +7,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from .models import User
 from .serializers import (
     UserRegistrationSerializer, 
@@ -78,14 +80,28 @@ class RegisterView(generics.CreateAPIView):
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
-    API endpoint to view and update user profile.
-    Only accessible to authenticated users.
+    API endpoint for user profile.
+    GET: Retrieve user profile
+    PUT/PATCH: Update user profile
     """
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
-    permission_classes = (IsAuthenticated,)
     
     def get_object(self):
         return self.request.user
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
 
 class ChangePasswordView(APIView):
@@ -116,3 +132,5 @@ class ChangePasswordView(APIView):
             }, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+

@@ -142,7 +142,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link 
-                  to="/organizer/register" 
+                  to="/register" 
                   className="text-gray-400 hover:text-primary-500 transition-colors duration-200 flex items-center group"
                 >
                   <span className="group-hover:translate-x-1 transition-transform duration-200">Become an Organizer</span>
@@ -150,38 +150,11 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
-                  to="/organizer/dashboard" 
+                  to="/dashboard" 
                   className="text-gray-400 hover:text-primary-500 transition-colors duration-200 flex items-center group"
                 >
                   <span className="group-hover:translate-x-1 transition-transform duration-200">Organizer Dashboard</span>
                 </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/create-event" 
-                  className="text-gray-400 hover:text-primary-500 transition-colors duration-200 flex items-center group"
-                >
-                  <span className="group-hover:translate-x-1 transition-transform duration-200">Create Event</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/pricing" 
-                  className="text-gray-400 hover:text-primary-500 transition-colors duration-200 flex items-center group"
-                >
-                  <span className="group-hover:translate-x-1 transition-transform duration-200">Pricing</span>
-                </Link>
-              </li>
-              <li>
-                <a 
-                  href="https://docs.tickethub.com" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-primary-500 transition-colors duration-200 flex items-center group"
-                >
-                  <span className="group-hover:translate-x-1 transition-transform duration-200">Documentation</span>
-                  <ExternalLink className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </a>
               </li>
             </ul>
           </div>
@@ -219,15 +192,15 @@ export default function Footer() {
             {/* Contact Info */}
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2 text-gray-400">
-                <Mail className="h-4 w-4 text-primary-500" />
-                <a href="mailto:support@tickethub.com" className="hover:text-primary-500 transition-colors">
-                  support@tickethub.com
+                <Mail className="h-4 w-4 text-primary-500 flex-shrink-0" />
+                <a href="mailto:support.tickethub@gmail.com" className="hover:text-primary-500 transition-colors">
+                  support.tickethub@gmail.com
                 </a>
               </div>
               <div className="flex items-center space-x-2 text-gray-400">
                 <Phone className="h-4 w-4 text-primary-500" />
-                <a href="tel:+254700000000" className="hover:text-primary-500 transition-colors">
-                  +254 700 000 000
+                <a href="tel:+254755913939" className="hover:text-primary-500 transition-colors">
+                  +254755913939
                 </a>
               </div>
               <div className="flex items-center space-x-2 text-gray-400">
